@@ -17,6 +17,7 @@ button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 16px
 .row{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
 .row img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--rl);flex:none}
 .mid{flex:1;min-width:0}.mid b{display:block;font-weight:500}.mid small{color:var(--mut)}
+.th{width:56px;height:56px;border-radius:50%;background:var(--rl);display:grid;place-items:center;font-size:26px;flex:none}.drow img{border-radius:50%}.drow input{margin-top:6px;padding:8px;font-size:13px}
 .ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .ctl input{width:84px;padding:7px 9px}.ctl button{padding:7px 10px;font-size:12px}.del{color:#b3261e}
 </style></head><body>
@@ -36,6 +37,7 @@ button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 16px
 <label for="dep">Departamento</label><select id="dep"></select>
 <label for="cat">Categoría</label><select id="cat"></select>
 <div class="m" id="sm" role="status"></div><button class="go" id="save">Subir producto</button></div>
+<div class="card"><h2>Fotos de los departamentos</h2><div class="m" id="dm" role="status"></div><div id="deps"></div></div>
 <div class="card"><h2>Tus productos</h2><div id="list"></div></div>
 </section></main>
 <script src="/config.js"></script>
@@ -50,10 +52,18 @@ sb.auth.getSession().then(function(r){show(!!r.data.session)});
 $("go").onclick=async function(){var r=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});if(r.error)msg("lm","Correo o clave incorrectos.");else show(true)};
 $("out").onclick=async function(){await sb.auth.signOut();show(false)};
 async function load(){
- var d=await sb.from("departments").select("id,name,categories(id,name,position)").order("position");DEPS=d.data||[];
- $("dep").innerHTML=DEPS.map(function(x,i){return '<option value="'+i+'">'+esc(x.name)+'</option>'}).join("");fillCats();
+ var d=await sb.from("departments").select("id,name,emoji,image_url,categories(id,name,position)").order("position");DEPS=d.data||[];
+ $("dep").innerHTML=DEPS.map(function(x,i){return '<option value="'+i+'">'+esc(x.name)+'</option>'}).join("");fillCats();depList();
  var s=await sb.from("settings").select("key,value");(s.data||[]).forEach(function(x){if(x.key==="tasa_bcv")$("rate").value=x.value});
  list()}
+function depList(){$("deps").innerHTML=DEPS.map(function(d){return '<div class="row drow">'+(d.image_url?'<img src="'+esc(d.image_url)+'" alt="">':'<div class="th">'+esc(d.emoji)+'</div>')+'<div class="mid"><b>'+esc(d.name)+'</b><input type="file" accept="image/*" data-d="'+d.id+'" aria-label="Foto de '+esc(d.name)+'"></div></div>'}).join("")}
+function cropSquare(f,size){return new Promise(function(res,rej){var u=URL.createObjectURL(f),im=new Image();im.onload=function(){try{var s=Math.min(im.width,im.height),c=document.createElement("canvas");c.width=c.height=size;c.getContext("2d").drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,size,size);URL.revokeObjectURL(u);c.toBlob(function(b){b?res(b):rej(new Error("No se pudo preparar la foto"))},"image/jpeg",.85)}catch(e){rej(e)}};im.onerror=function(){rej(new Error("No se pudo leer la foto"))};im.src=u})}
+$("deps").onchange=async function(e){var id=e.target.dataset.d,f=e.target.files&&e.target.files[0];if(!id||!f)return;
+ try{msg("dm","Subiendo foto…",true);var blob=await withTimeout(cropSquare(f,400),20000,"La foto tardó mucho en prepararse");
+ var path="dept-"+id+"-"+Date.now()+".jpg",up=await withTimeout(sb.storage.from("products").upload(path,blob,{contentType:"image/jpeg"}),60000,"La subida tardó demasiado.");
+ if(up.error)throw new Error("Foto: "+up.error.message);
+ var url=sb.storage.from("products").getPublicUrl(path).data.publicUrl,r=await sb.from("departments").update({image_url:url}).eq("id",id);
+ if(r.error)throw new Error(r.error.message);msg("dm","¡Foto actualizada!",true);load()}catch(err){msg("dm",err.message||String(err))}};
 function fillCats(){var d=DEPS[$("dep").value]||{categories:[]};$("cat").innerHTML=d.categories.sort(function(a,b){return a.position-b.position}).map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join("")}
 $("dep").onchange=fillCats;
 $("rsave").onclick=async function(){var v=parseFloat($("rate").value);if(!(v>0))return msg("rm","Escribe una tasa válida.");

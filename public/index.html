@@ -44,6 +44,8 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 .chips{display:flex;gap:8px;overflow-x:auto;padding:14px;scrollbar-width:none}
 .chips[hidden]{display:none}
 .ph[data-z]{cursor:zoom-in}
+.dep i.im{background-size:cover;background-position:center;background-repeat:no-repeat}
+.dth{display:inline-block;vertical-align:middle;width:28px;height:28px;border-radius:50%;background-size:cover;background-position:center;margin-right:8px}
 .ph[data-z]::after{content:"⤢";position:absolute;right:8px;bottom:8px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.88);color:var(--rose-d);display:grid;place-items:center;font-size:15px}
 #zoom{align-items:center;padding:16px}
 .zbox{background:var(--bg);border-radius:20px;width:100%;max-width:480px;max-height:92%;overflow:auto;position:relative}
@@ -66,7 +68,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 .dep{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;font-size:12px;line-height:1.2;text-align:center;color:var(--ink)}
 .dep i{font-style:normal;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:27px;background:var(--rose-l);border:2px solid transparent}
 .dep[aria-pressed=true]{font-weight:600;color:var(--rose-d)}
-.dep[aria-pressed=true] i{background:#fff;border-color:#b88444;box-shadow:0 0 0 2px var(--rose)}
+.dep[aria-pressed=true] i{background-color:#fff;border-color:#b88444;box-shadow:0 0 0 2px var(--rose)}
 .ddep{display:flex;justify-content:space-between;width:100%;padding:14px 12px;margin-top:8px;font-weight:600;font-size:15px;border-radius:12px;background:var(--rose-l);color:var(--rose-d)}
 .dsub{padding-left:10px}.dsub[hidden]{display:none}
 .chip{flex:none;padding:8px 15px;border-radius:20px;border:1px solid var(--line);background:var(--bg);font-size:14px;color:var(--ink)}
@@ -226,12 +228,12 @@ function amt(){var t=totals().t;return pay==="Binance"?money(t)+" (USDT)":bs(t)+
 function totals(){var n=0,t=0;P.forEach(function(p){var k=cart[p.id]||0;n+=k;t+=k*p.p});return{n:n,t:t}}
 function cnt(f){return P.filter(function(p){return !p.del&&f(p)}).length}
 function chips(){
-$("depts").innerHTML=[["Todos","✨"]].concat(DEPTS.map(function(d){return[d[0],d[1]]})).map(function(d){return '<button class="dep" data-dp="'+d[0]+'" aria-pressed="'+(d[0]===dept)+'"><i aria-hidden="true">'+d[1]+'</i>'+d[0]+'</button>'}).join("");
+$("depts").innerHTML=[["Todos","","","/img/logo.jpg"]].concat(DEPTS.map(function(d){return d})).map(function(d){return '<button class="dep" data-dp="'+d[0]+'" aria-pressed="'+(d[0]===dept)+'">'+(d[3]?'<i class="im" style="background-image:url('+d[3]+')"></i>':'<i aria-hidden="true">'+d[1]+'</i>')+d[0]+'</button>'}).join("");
 var D=DEPTS.filter(function(d){return d[0]===dept})[0];$("chips").hidden=!D;
 if(D)$("chips").innerHTML=["Todas"].concat(D[2]).map(function(c){var a=c==="Todas",v=a?"Todos":c;return '<button class="chip" data-c="'+v+'" aria-pressed="'+(v===cat)+'">'+c+' ('+cnt(function(p){return p.d===dept&&(a||p.c===c)})+')</button>'}).join("");
 drawer()}
 function drawer(){
-$("dlist").innerHTML='<button class="dcat" data-dp="Todos" aria-pressed="'+(dept==="Todos")+'">Todos los productos<span>'+cnt(function(){return true})+'</span></button>'+DEPTS.map(function(d){var o=open_d[d[0]];return '<button class="ddep" data-t="'+d[0]+'" aria-expanded="'+!!o+'"><span>'+d[1]+' '+d[0]+'</span><span>'+cnt(function(p){return p.d===d[0]})+' '+(o?'▴':'▾')+'</span></button><div class="dsub"'+(o?'':' hidden')+'>'+d[2].map(function(c){return '<button class="dcat" data-d="'+d[0]+'" data-c="'+c+'" aria-pressed="'+(dept===d[0]&&cat===c)+'">'+c+'<span>'+cnt(function(p){return p.c===c})+'</span></button>'}).join("")+'</div>'}).join("")}
+$("dlist").innerHTML='<button class="dcat" data-dp="Todos" aria-pressed="'+(dept==="Todos")+'">Todos los productos<span>'+cnt(function(){return true})+'</span></button>'+DEPTS.map(function(d){var o=open_d[d[0]];return '<button class="ddep" data-t="'+d[0]+'" aria-expanded="'+!!o+'"><span>'+(d[3]?'<b class="dth" style="background-image:url('+d[3]+')"></b>':d[1]+' ')+d[0]+'</span><span>'+cnt(function(p){return p.d===d[0]})+' '+(o?'▴':'▾')+'</span></button><div class="dsub"'+(o?'':' hidden')+'>'+d[2].map(function(c){return '<button class="dcat" data-d="'+d[0]+'" data-c="'+c+'" aria-pressed="'+(dept===d[0]&&cat===c)+'">'+c+'<span>'+cnt(function(p){return p.c===c})+'</span></button>'}).join("")+'</div>'}).join("")}
 function grid(){var l=P.filter(function(p){return !p.del&&(dept==="Todos"||p.d===dept)&&(cat==="Todos"||p.c===cat)&&(!onlyFav||favs[p.id])&&p.n.toLowerCase().indexOf(q)>-1});
 $("ttl").textContent=onlyFav?"Tus favoritos":(cat!=="Todos"?dept+" › "+cat:dept!=="Todos"?dept:"Todos los productos");
 $("grid").innerHTML=l.length?l.map(function(p){var k=cart[p.id]||0;
@@ -304,8 +306,8 @@ var TILES=["#f3dfe2","#f0e0c8","#e8c9ce","#f4ece8","#e8dfe0","#d9d2d3"];
 function api(path){var C=window.CONFIG;return fetch(C.SUPABASE_URL+"/rest/v1/"+path,{headers:{apikey:C.SUPABASE_ANON_KEY,Authorization:"Bearer "+C.SUPABASE_ANON_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})}
 function load(){
 $("grid").innerHTML='<p class="empty">Cargando productos…</p>';
-Promise.all([api("departments?select=name,emoji,categories(name,position)&order=position"),api("products?select=id,name,price_usd,image_url,in_stock,categories(name,departments(name))&active=eq.true&order=created_at.desc"),api("settings?select=key,value")]).then(function(r){
-DEPTS=r[0].map(function(d){return[d.name,d.emoji||"🛍",d.categories.sort(function(a,b){return a.position-b.position}).map(function(c){return c.name})]});
+Promise.all([api("departments?select=name,emoji,image_url,categories(name,position)&order=position"),api("products?select=id,name,price_usd,image_url,in_stock,categories(name,departments(name))&active=eq.true&order=created_at.desc"),api("settings?select=key,value")]).then(function(r){
+DEPTS=r[0].map(function(d){return[d.name,d.emoji||"🛍",d.categories.sort(function(a,b){return a.position-b.position}).map(function(c){return c.name}),d.image_url||""]});
 DEP_OF={};var em={};r[0].forEach(function(d){em[d.name]=d.emoji||"🛍"});DEPTS.forEach(function(d){d[2].forEach(function(c){DEP_OF[c]=d[0]})});
 P=r[1].map(function(p,i){var c=p.categories||{},dn=(c.departments||{}).name||"";return{id:i,uid:p.id,n:esc(p.name),c:c.name||"",d:dn,p:Number(p.price_usd),col:TILES[i%TILES.length],e:em[dn]||"🛍",img:p.image_url||"",out:!p.in_stock}});
 r[2].forEach(function(s){if(s.key==="tasa_bcv")RATE=parseFloat(s.value);if(s.key==="tasa_fecha")RDATE=s.value});
