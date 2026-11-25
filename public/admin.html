@@ -21,7 +21,7 @@ button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 16px
 .ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .ctl input{width:84px;padding:7px 9px}.ctl button{padding:7px 10px;font-size:12px}.del{color:#b3261e}
 </style></head><body>
-<header><img src="/img/logo.jpg" alt=""><h1>Administrar tienda <small style="font-weight:400;opacity:.55;font-size:11px">v6</small></h1><button id="out" hidden>Salir</button></header>
+<header><img src="/img/logo.jpg" alt=""><h1>Administrar tienda <small style="font-weight:400;opacity:.55;font-size:11px">v7</small></h1><button id="out" hidden>Salir</button></header>
 <main>
 <section id="login" class="card"><h2>Entrar</h2>
 <label for="em">Correo</label><input id="em" type="email" autocomplete="username">
@@ -37,7 +37,7 @@ button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 16px
 <label for="dep">Departamento</label><select id="dep"></select>
 <label for="cat">Categoría</label><select id="cat"></select>
 <div class="m" id="sm" role="status"></div><button class="go" id="save">Subir producto</button></div>
-<div class="card"><h2>Fotos de los departamentos</h2><div class="m" id="dm" role="status"></div><div id="deps"></div></div>
+<div class="card" hidden><h2>Fotos de los departamentos</h2><div class="m" id="dm" role="status"></div><div id="deps"></div></div>
 <div class="card"><h2>Tus productos</h2><div id="list"></div></div>
 </section></main>
 <script src="/config.js"></script>
