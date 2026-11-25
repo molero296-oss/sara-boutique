@@ -2,7 +2,8 @@
 // lo guarda y lo manda de una sola vez al bot de Telegram.
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const UUID = /^[0-9a-f-]{36}$/i;
-const PAGOS = ["Pago móvil", "Transferencia", "Binance"];
+const REG = ["Pago móvil", "Transferencia", "Binance"];
+const PAGOS = [...REG, "Punto de venta"];
 const usd = n => "$" + Number(n).toFixed(2);
 const bsf = n => "Bs " + Number(n).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const sb = (path, opt = {}) => fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`, {
@@ -16,9 +17,9 @@ module.exports = async (req, res) => {
     const b = req.body || {}, c = b.cliente || {}, pg = b.pago || {};
     const t = (v, m = 120) => String(v || "").trim().slice(0, m);
     const items = Array.isArray(b.items) ? b.items.slice(0, 60) : [];
-    if (!items.length || !t(c.nombre) || !t(c.cedula) || !t(c.telefono) || !PAGOS.includes(pg.metodo) || !/^\d{4}$/.test(String(pg.ref4)))
+    if (!items.length || !t(c.nombre) || !t(c.cedula) || !t(c.telefono) || !PAGOS.includes(pg.metodo) || (REG.includes(pg.metodo) && !/^\d{4}$/.test(String(pg.ref4))))
       return res.status(400).json({ ok: false, error: "Faltan datos del pedido." });
-    if (pg.metodo !== "Binance" && (!t(pg.telOrigen) || !t(pg.bancoOrigen)))
+    if (REG.includes(pg.metodo) && pg.metodo !== "Binance" && (!t(pg.telOrigen) || !t(pg.bancoOrigen)))
       return res.status(400).json({ ok: false, error: "Falta el teléfono o el banco desde donde pagaste." });
 
     const qty = {};
@@ -38,13 +39,15 @@ module.exports = async (req, res) => {
       total += q * Number(p.price_usd);
       return { id: p.id, nombre: p.name, qty: q, precio: Number(p.price_usd), dep: (cat.departments || {}).name || "", cat: cat.name || "" };
     });
+    const fee = b.delivery === true ? 2 : 0;
+    total += fee;
     const totalBs = total * rate;
     const entrega = t(b.entrega), dir = t(b.direccion, 300), ref = t(b.referencia, 200);
 
     const ins = await sb("orders", {
       method: "POST", headers: { Prefer: "return=representation" },
       body: JSON.stringify({
-        customer: { nombre: t(c.nombre), cedula: t(c.cedula), telefono: t(c.telefono), entrega, direccion: dir, referencia: ref },
+        customer: { nombre: t(c.nombre), cedula: t(c.cedula), telefono: t(c.telefono), entrega, delivery_usd: fee, direccion: dir, referencia: ref },
         items: lines,
         payment: { metodo: pg.metodo, ref4: pg.ref4, telOrigen: t(pg.telOrigen), bancoOrigen: t(pg.bancoOrigen) },
         total_usd: total, rate, total_bs: totalBs
@@ -59,9 +62,9 @@ module.exports = async (req, res) => {
       ``, `<b>Productos</b>`,
       ...lines.map(l => `• ${l.qty} × ${esc(l.nombre)} [${esc(l.dep)} › ${esc(l.cat)}] — ${usd(l.qty * l.precio)}`),
       ``, `<b>Entrega:</b> ${esc(entrega)}`, dir ? `<b>Dirección:</b> ${esc(dir)}` : "", ref ? `<b>Referencia:</b> ${esc(ref)}` : "",
-      ``, `<b>Pago:</b> ${esc(pg.metodo)}`, `• Últimos 4 dígitos: ${esc(pg.ref4)}`,
-      pg.metodo !== "Binance" ? `• Desde el número: ${esc(t(pg.telOrigen))}\n• Banco de origen: ${esc(t(pg.bancoOrigen))}` : "",
-      ``, `<b>Total:</b> ${usd(total)} / ${bsf(totalBs)} (tasa BCV ${rate})`
+      ``, `<b>Pago:</b> ${esc(pg.metodo)}`, REG.includes(pg.metodo) ? `• Últimos 4 dígitos: ${esc(pg.ref4)}` : "",
+      REG.includes(pg.metodo) && pg.metodo !== "Binance" ? `• Desde el número: ${esc(t(pg.telOrigen))}\n• Banco de origen: ${esc(t(pg.bancoOrigen))}` : "",
+      ``, fee ? `<b>Delivery:</b> +${usd(fee)}` : "", `<b>Total:</b> ${usd(total)} / ${bsf(totalBs)} (tasa BCV ${rate})`
     ].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
 
     try {
