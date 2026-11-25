@@ -59,19 +59,28 @@ $("dep").onchange=fillCats;
 $("rsave").onclick=async function(){var v=parseFloat($("rate").value);if(!(v>0))return msg("rm","Escribe una tasa válida.");
  var r=await sb.from("settings").upsert([{key:"tasa_bcv",value:String(v)},{key:"tasa_fecha",value:new Date().toLocaleDateString("es-VE")}]);
  r.error?msg("rm","No se pudo guardar: "+r.error.message):msg("rm","Tasa actualizada.",true)};
-function resize(f){return new Promise(function(res){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(res,"image/jpeg",.85)};im.src=r.result};r.readAsDataURL(f)})}
+function withTimeout(p,ms,txt){return Promise.race([p,new Promise(function(_,rej){setTimeout(function(){rej(new Error(txt))},ms)})])}
+function resize(f){return new Promise(function(res,rej){var u=URL.createObjectURL(f),im=new Image();
+ im.onload=function(){try{var s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(function(b){b?res(b):rej(new Error("No se pudo reducir la foto"))},"image/jpeg",.85)}catch(e){rej(e)}};
+ im.onerror=function(){rej(new Error("No se pudo leer la foto"))};im.src=u})}
 $("save").onclick=async function(){
  var f=$("file").files[0],n=$("name").value.trim(),p=parseFloat($("price").value),c=$("cat").value;
  if(!f||!n||!(p>=0)||!c)return msg("sm","Agrega la foto, el nombre y el precio.");
- $("save").disabled=true;msg("sm","Subiendo…",true);
- var blob=await resize(f),path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
- var up=await sb.storage.from("products").upload(path,blob,{contentType:"image/jpeg"});
- if(up.error){$("save").disabled=false;return msg("sm","No se pudo subir la foto: "+up.error.message)}
- var url=sb.storage.from("products").getPublicUrl(path).data.publicUrl;
- var ins=await sb.from("products").insert({name:n,price_usd:p,image_url:url,category_id:c});
- $("save").disabled=false;
- if(ins.error)return msg("sm","No se pudo guardar: "+ins.error.message);
- $("name").value="";$("price").value="";$("file").value="";msg("sm","¡Producto subido!",true);list()}
+ $("save").disabled=true;
+ try{
+  msg("sm","1/3 Preparando la foto…",true);
+  var blob;try{blob=await withTimeout(resize(f),20000,"La foto tardó mucho en prepararse")}catch(e){blob=f}
+  msg("sm","2/3 Subiendo la foto ("+Math.round(blob.size/1024)+" KB)…",true);
+  var path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+  var up=await withTimeout(sb.storage.from("products").upload(path,blob,{contentType:"image/jpeg"}),60000,"La subida tardó demasiado. Revisa tu internet e intenta de nuevo.");
+  if(up.error)throw new Error("Foto: "+up.error.message);
+  var url=sb.storage.from("products").getPublicUrl(path).data.publicUrl;
+  msg("sm","3/3 Guardando el producto…",true);
+  var ins=await withTimeout(sb.from("products").insert({name:n,price_usd:p,image_url:url,category_id:c}),20000,"Guardar tardó demasiado.");
+  if(ins.error)throw new Error("Producto: "+ins.error.message);
+  $("name").value="";$("price").value="";$("file").value="";msg("sm","¡Producto subido!",true);list()
+ }catch(e){msg("sm",e.message||String(e))}
+ $("save").disabled=false}
 async function list(){
  var r=await sb.from("products").select("id,name,price_usd,image_url,in_stock,categories(name,departments(name))").order("created_at",{ascending:false});
  $("list").innerHTML=(r.data||[]).map(function(p){var c=p.categories||{};
