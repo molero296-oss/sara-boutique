@@ -171,7 +171,7 @@ footer .sc{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:24
 <footer>
   <div class="sc">Gracias por preferirnos</div>
   <p>Instagram @SaraBoutique_2025 · 0412-1994914</p>
-  <p style="font-size:11px;opacity:.55;margin-top:6px">v7</p>
+  <p style="font-size:11px;opacity:.55;margin-top:6px">v8</p>
 </footer>
 
 <a class="wa" href="https://wa.me/584121994914" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">✆</a>
@@ -316,7 +316,7 @@ function ok(){b.textContent="¡Copiado!";setTimeout(function(){b.textContent="Co
 function fb(){var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(e){}a.remove();ok()}
 if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,fb)}else fb()}
 $("tasa").textContent="Tasa BCV: Bs "+RATE.toFixed(2).replace(".",",")+" por $1 · "+RDATE;
-$("pay").innerHTML=PAYS.map(function(p){return '<button class="opt" data-v="'+p+'" aria-pressed="false">'+ICO[p]+'<span>'+p+'</span></button>'}).join("");
+$("pay").innerHTML=PAYS.filter(function(p){return !(p in PD)||PD[p].length}).map(function(p){return '<button class="opt" data-v="'+p+'" aria-pressed="false">'+ICO[p]+'<span>'+p+'</span></button>'}).join("");
 $("rb").innerHTML='<option value="">Selecciona tu banco</option>'+BANKS.map(function(x){return '<option>'+x+'</option>'}).join("");
 document.documentElement.style.setProperty("--wm",'url("/img/wm.jpg")');document.querySelector(".hlogo").src=document.querySelector(".logo img").src;
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
