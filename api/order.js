@@ -1,5 +1,6 @@
 // Recibe el pedido, lo valida con los precios REALES de la base de datos,
 // lo guarda y lo manda de una sola vez al bot de Telegram.
+const { getRate } = require("./rate");
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const UUID = /^[0-9a-f-]{36}$/i;
 const REG = ["Pago móvil", "Transferencia", "Binance"];
@@ -31,8 +32,8 @@ module.exports = async (req, res) => {
     if (!Array.isArray(pr) || pr.length !== ids.length || pr.some(p => !p.in_stock))
       return res.status(409).json({ ok: false, error: "Algún producto ya no está disponible. Revisa tu carrito." });
 
-    const st = await (await sb("settings?select=key,value")).json();
-    const rate = parseFloat((st.find(s => s.key === "tasa_bcv") || {}).value) || 0;
+    const { rate } = await getRate();
+    if (!(rate > 0)) return res.status(503).json({ ok: false, error: "No pudimos obtener la tasa del día. Intenta en unos minutos." });
     let total = 0;
     const lines = pr.map(p => {
       const q = qty[p.id], cat = p.categories || {};
