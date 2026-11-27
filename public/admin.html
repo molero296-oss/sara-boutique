@@ -21,7 +21,7 @@ button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 16px
 .ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .ctl input{width:84px;padding:7px 9px}.ctl button{padding:7px 10px;font-size:12px}.del{color:#b3261e}
 </style></head><body>
-<header><img src="/img/logo.jpg" alt=""><h1>Administrar tienda <small style="font-weight:400;opacity:.55;font-size:11px">v7</small></h1><button id="out" hidden>Salir</button></header>
+<header><img src="/img/logo.jpg" alt=""><h1>Administrar tienda <small style="font-weight:400;opacity:.55;font-size:11px">v9</small></h1><button id="out" hidden>Salir</button></header>
 <main>
 <section id="login" class="card"><h2>Entrar</h2>
 <label for="em">Correo</label><input id="em" type="email" autocomplete="username">
@@ -29,7 +29,8 @@ button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 16px
 <div class="m" id="lm" role="alert"></div><button class="go" id="go">Entrar</button></section>
 <section id="app" hidden>
 <div class="card"><h2>Tasa BCV</h2><label for="rate">Bs por $1</label><input id="rate" type="number" step="0.01" min="0">
-<div class="m" id="rm" role="status"></div><button class="go" id="rsave">Guardar tasa</button></div>
+<div class="m" id="rm" role="status"></div><p class="m" id="rmode" style="color:#8a7478"></p><button class="go" id="rsave">Guardar tasa manual</button>
+<button class="go" id="rauto" style="background:var(--rl);color:#9a5662">Usar tasa automática del BCV</button></div>
 <div class="card"><h2>Nuevo producto</h2>
 <label for="file">Foto</label><input id="file" type="file" accept="image/*">
 <label for="name">Nombre</label><input id="name">
@@ -54,7 +55,7 @@ $("out").onclick=async function(){await sb.auth.signOut();show(false)};
 async function load(){
  var d=await sb.from("departments").select("id,name,emoji,image_url,categories(id,name,position)").order("position");DEPS=d.data||[];
  $("dep").innerHTML=DEPS.map(function(x,i){return '<option value="'+i+'">'+esc(x.name)+'</option>'}).join("");fillCats();depList();
- var s=await sb.from("settings").select("key,value");(s.data||[]).forEach(function(x){if(x.key==="tasa_bcv")$("rate").value=x.value});
+ var s=await sb.from("settings").select("key,value");(s.data||[]).forEach(function(x){if(x.key==="tasa_bcv")$("rate").value=x.value;if(x.key==="tasa_modo")mode=x.value});showMode();
  list()}
 function depList(){$("deps").innerHTML=DEPS.map(function(d){return '<div class="row drow">'+(d.image_url?'<img src="'+esc(d.image_url)+'" alt="">':'<div class="th">'+esc(d.emoji)+'</div>')+'<div class="mid"><b>'+esc(d.name)+'</b><input type="file" accept="image/*" data-d="'+d.id+'" aria-label="Foto de '+esc(d.name)+'"></div></div>'}).join("")}
 function cropSquare(f,size){return new Promise(function(res,rej){var u=URL.createObjectURL(f),im=new Image();im.onload=function(){try{var s=Math.min(im.width,im.height),c=document.createElement("canvas");c.width=c.height=size;c.getContext("2d").drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,size,size);URL.revokeObjectURL(u);c.toBlob(function(b){b?res(b):rej(new Error("No se pudo preparar la foto"))},"image/jpeg",.85)}catch(e){rej(e)}};im.onerror=function(){rej(new Error("No se pudo leer la foto"))};im.src=u})}
@@ -67,8 +68,11 @@ $("deps").onchange=async function(e){var id=e.target.dataset.d,f=e.target.files&
 function fillCats(){var d=DEPS[$("dep").value]||{categories:[]};$("cat").innerHTML=d.categories.sort(function(a,b){return a.position-b.position}).map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join("")}
 $("dep").onchange=fillCats;
 $("rsave").onclick=async function(){var v=parseFloat($("rate").value);if(!(v>0))return msg("rm","Escribe una tasa válida.");
- var r=await sb.from("settings").upsert([{key:"tasa_bcv",value:String(v)},{key:"tasa_fecha",value:new Date().toLocaleDateString("es-VE")}]);
+ var r=await sb.from("settings").upsert([{key:"tasa_bcv",value:String(v)},{key:"tasa_fecha",value:new Date().toLocaleDateString("es-VE")},{key:"tasa_modo",value:"manual"}]);if(!r.error){mode="manual";showMode()}
  r.error?msg("rm","No se pudo guardar: "+r.error.message):msg("rm","Tasa actualizada.",true)};
+var mode="auto";
+function showMode(){$("rmode").textContent=mode==="manual"?"Ahora usa la tasa MANUAL que guardaste.":"Ahora usa la tasa AUTOMÁTICA del BCV."}
+$("rauto").onclick=async function(){var r=await sb.from("settings").upsert([{key:"tasa_modo",value:"auto"}]);r.error?msg("rm","No se pudo cambiar: "+r.error.message):(mode="auto",showMode(),msg("rm","Listo: la tasa ahora se actualiza sola.",true))};
 function withTimeout(p,ms,txt){return Promise.race([p,new Promise(function(_,rej){setTimeout(function(){rej(new Error(txt))},ms)})])}
 function resize(f){return new Promise(function(res,rej){var u=URL.createObjectURL(f),im=new Image();
  im.onload=function(){try{var s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(function(b){b?res(b):rej(new Error("No se pudo reducir la foto"))},"image/jpeg",.85)}catch(e){rej(e)}};
